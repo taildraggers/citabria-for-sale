@@ -192,6 +192,10 @@ def extract_jsonld_objects(soup: BeautifulSoup) -> list[dict]:
 
 YEAR_RE = re.compile(r"(?<!\d)(19\d{2}|20\d{2})(?!\d)")
 LABELED_YEAR_RE = re.compile(r"\byear\W{0,6}(19\d{2}|20\d{2})\b", re.IGNORECASE)
+# A two-digit year leading the title ("76 Citabria", "75CITABRIA"), read as
+# 1930-1999. Only at the very start, where it can't be an engine time or
+# horsepower figure.
+SHORT_YEAR_RE = re.compile(r"^'?([3-9]\d)(?=[\s'-]|[a-z])", re.IGNORECASE)
 
 # Words that mark a listing as parts/accessories/services/raffles rather than
 # a whole aircraft for sale. Matched as whole words/phrases against the ad's
@@ -240,11 +244,15 @@ ALLOWED_PHRASES = [
 
 
 def extract_listing_year(title: str, page_text: str = "") -> str | None:
-    """Pull a 4-digit model year from the title, falling back to a labeled
-    'Year: 19xx' field in the ad body if the title doesn't state one."""
+    """Pull a 4-digit (or leading 2-digit) model year from the title, falling
+    back to a labeled 'Year: 19xx' field in the ad body if the title doesn't
+    state one."""
     match = YEAR_RE.search(title)
     if match:
         return match.group(1)
+    match = SHORT_YEAR_RE.match(title.strip())
+    if match:
+        return "19" + match.group(1)
     if page_text:
         match = LABELED_YEAR_RE.search(page_text)
         if match:

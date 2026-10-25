@@ -49,6 +49,9 @@ _CITABRIA_RE = re.compile(r"citabria", re.IGNORECASE)
 # 7-series model codes (7ECA, 7GCAA, 7GCBC, 7KCAB, ...), run straight into
 # the next word as often as not ("7GCBCExplorer"), so only a leading \b.
 _MODEL_CODE_RE = re.compile(r"\b(7\s?-?\s?[egk]c[a-c]{1,3})", re.IGNORECASE)
+# The same codes with the leading "7" left off ("Citabria 1972 GCBC"), only
+# as a whole word so ordinary words can't match.
+_BARE_CODE_RE = re.compile(r"\b(eca|gcaa|gcbc|kcab)\b", re.IGNORECASE)
 _MODEL_NAME_RULES = [
     (re.compile(r"\baurora\b", re.IGNORECASE), "7ECA"),
     (re.compile(r"\badventure\b", re.IGNORECASE), "7GCAA"),
@@ -65,6 +68,9 @@ def _extract_model(title: str) -> tuple[str, str] | None:
     match = _MODEL_CODE_RE.search(title)
     if match:
         return MAKE, re.sub(r"[\s-]", "", match.group(1)).upper()
+    match = _BARE_CODE_RE.search(title)
+    if match:
+        return MAKE, "7" + match.group(1).upper()
     if _OTHER_MODEL_RE.search(title):
         return None
     for pattern, canonical in _MODEL_NAME_RULES:
